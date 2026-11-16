@@ -5,6 +5,9 @@ public class Descuentos {
         if ("frecuente".equals(tipoCliente)) {
             return (int) (valor * 0.9);
         }
+        if ("convenio".equals(tipoCliente)) {
+            return (int) (valor * 0.8);
+        }
         return valor;
     }
 }
