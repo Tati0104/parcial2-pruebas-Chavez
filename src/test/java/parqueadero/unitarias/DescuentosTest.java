@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
 
 import parqueadero.Descuentos;
 
@@ -42,5 +45,15 @@ class DescuentosTest {
                 () -> descuentos.aplicarDescuento(3000, "vip"));
         assertEquals("Tipo de cliente no válido", error.getMessage());
     }
-
+    
+    @ParameterizedTest(name = "{0} con cliente {1} queda en {2}")
+    @CsvSource({
+        "3000, ninguno, 3000",
+        "1999, frecuente, 1799",
+        "0, convenio, 0"
+    })
+    @DisplayName("Aplica el descuento y redondea hacia abajo")
+    void aplicaDescuentoYRedondeaHaciaAbajo(int valor, String tipoCliente, int esperado) {
+        assertEquals(esperado, descuentos.aplicarDescuento(valor, tipoCliente));
+    }
 }
