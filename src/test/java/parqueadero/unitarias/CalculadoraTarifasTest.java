@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import parqueadero.CalculadoraTarifas;
 
-/** Pruebas unitarias iniciales de calcularTarifa. Están incompletas a propósito. */
+/** Pruebas unitarias de calcularTarifa: particiones de equivalencia y valores límite. */
 class CalculadoraTarifasTest {
 
     private final CalculadoraTarifas calculadora = new CalculadoraTarifas();
@@ -30,54 +33,91 @@ class CalculadoraTarifasTest {
     void rechazaUnTipoDeVehiculoDesconocido() {
         assertThrows(IllegalArgumentException.class, () -> calculadora.calcularTarifa(30, "bicicleta"));
     }
-    @Test 
-    @DisplayName ("Una moto con 10 horas paga el tope de 20.000")
-    void motoCon10HorasPagaTope() {
-        assertEquals(20000, calculadora.calcularTarifa(600, "moto"));
+
+    // Partición: minutos de gracia (0 a 15) no pagan. Límites: 0 y 15.
+    @ParameterizedTest(name = "{1} con {0} minutos no paga")
+    @CsvSource({
+        "0, carro",
+        "15, carro",
+        "0, moto",
+        "10, moto",
+        "15, moto"
+    })
+    @DisplayName("Dentro de los minutos de gracia no se paga nada")
+    void dentroDeLaGraciaNoPaga(int minutos, String tipoVehiculo) {
+        assertEquals(0, calculadora.calcularTarifa(minutos, tipoVehiculo));
     }
-    @Test 
-    @displayName ("Un carro con 10 horas paga el tope de 25.000")
-    void carroCon10HorasPagaTope() {    
-        assertEquals(25000, calculadora.calcularTarifa(600, "carro"));
+
+    // Partición: después de la gracia se cobra cada hora o fracción.
+    // Límites: 16 (primer minuto cobrado), 60 y 61 (cambio de hora).
+    @ParameterizedTest(name = "{1} con {0} minutos paga {2}")
+    @CsvSource({
+        "16, carro, 3000",
+        "60, carro, 3000",
+        "61, carro, 6000",
+        "120, carro, 6000",
+        "180, carro, 9000",
+        "16, moto, 1500",
+        "60, moto, 1500",
+        "61, moto, 3000",
+        "120, moto, 3000"
+    })
+    @DisplayName("Después de la gracia se cobra cada hora o fracción de hora")
+    void cobraCadaHoraOFraccion(int minutos, String tipoVehiculo, int esperado) {
+        assertEquals(esperado, calculadora.calcularTarifa(minutos, tipoVehiculo));
     }
-    @Test 
-    @DisplayName ("Una moto con 0 horas paga 0")
-    void motoCon0HorasPaga0() {
-        assertEquals(0, calculadora.calcularTarifa(0, "moto"));
+
+    // Tope del carro (25000). 480 min = 8 h = 24000, justo debajo del tope.
+    // 481 min = 9 h = 27000, se corta al tope.
+    @ParameterizedTest(name = "carro con {0} minutos paga {1}")
+    @CsvSource({
+        "480, 24000",
+        "481, 25000",
+        "600, 25000",
+        "1440, 25000"
+    })
+    @DisplayName("Un carro nunca paga más del tope diario de 25000")
+    void carroNoSuperaElTopeDiario(int minutos, int esperado) {
+        assertEquals(esperado, calculadora.calcularTarifa(minutos, "carro"));
     }
-    @Test 
-    @DisplayName ("Un carro con 0 horas paga 0")
-    void carroCon0HorasPaga0() {
-        assertEquals(0, calculadora.calcularTarifa(0, "carro"));
+
+    // Tope de la moto (12000). 420 min = 7 h = 10500, debajo del tope.
+    // 480 min = 8 h = 12000, justo en el tope. 481 min = 9 h = 13500, se corta al tope.
+    @ParameterizedTest(name = "moto con {0} minutos paga {1}")
+    @CsvSource({
+        "420, 10500",
+        "480, 12000",
+        "481, 12000",
+        "600, 12000",
+        "1440, 12000"
+    })
+    @DisplayName("Una moto nunca paga más del tope diario de 12000")
+    void motoNoSuperaElTopeDiario(int minutos, int esperado) {
+        assertEquals(esperado, calculadora.calcularTarifa(minutos, "moto"));
     }
-    @Test 
-    @DisplayName ("Una moto con 1 hora paga 2.000")
-    void motoCon1HoraPaga2000() {
-        assertEquals(2000, calculadora.calcularTarifa(60, "moto"));
+
+    // Partición inválida: minutos fuera del rango 0 a 1440. Límites: -1 y 1441.
+    @ParameterizedTest(name = "{1} con {0} minutos es rechazado")
+    @CsvSource({
+        "-1, carro",
+        "1441, carro",
+        "-1, moto",
+        "1441, moto"
+    })
+    @DisplayName("Rechaza minutos fuera del rango de 0 a 1440")
+    void rechazaMinutosFueraDeRango(int minutos, String tipoVehiculo) {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> calculadora.calcularTarifa(minutos, tipoVehiculo));
+        assertEquals("Los minutos deben estar entre 0 y 1440", error.getMessage());
     }
-    @Test 
-    @DisplayName ("Un carro con 1 hora paga 5.000")
-    void carroCon1HoraPaga5000() {
-        assertEquals(5000, calculadora.calcularTarifa(60, "carro"));
-    }
-    @Test 
-    @DisplayName ("Una moto con 2 horas paga 4.000")
-    void motoCon2HorasPaga4000() {
-        assertEquals(4000, calculadora.calcularTarifa(120, "moto"));
-    }
-    @Test 
-    @DisplayName ("Un carro con 2 horas paga 10.000")
-    void carroCon2HorasPaga10000() {
-        assertEquals(10000, calculadora.calcularTarifa(120, "carro"));
-    }
-    @Test 
-    @DisplayName ("Una moto con 10 minutos paga 0")
-    void motoCon10minutosPaga0() {  
-        assertEquals(0, calculadora.calcularTarifa(10, "moto"));
-    }
-    @Test 
-    @DisplayName ("Un carro con 3 horas paga 15.000")
-    void carroCon3HorasPaga15000() {
-        assertEquals(15000, calculadora.calcularTarifa(180, "carro"));
+
+    // Partición inválida: cualquier tipo distinto de "carro" o "moto".
+    @ParameterizedTest(name = "rechaza el tipo \"{0}\"")
+    @ValueSource(strings = {"bicicleta", "camion", "", "Carro", "MOTO"})
+    @DisplayName("Rechaza tipos de vehículo distintos de carro y moto")
+    void rechazaTiposDeVehiculoNoValidos(String tipoVehiculo) {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> calculadora.calcularTarifa(30, tipoVehiculo));
+        assertEquals("Tipo de vehículo no válido", error.getMessage());
     }
 }
