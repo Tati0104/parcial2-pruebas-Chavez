@@ -1,11 +1,14 @@
 package parqueadero.unitarias;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import parqueadero.Descuentos;
+
+
 
 /** Pruebas unitarias de aplicarDescuento, construidas con TDD. */
 class DescuentosTest {
@@ -22,5 +25,13 @@ class DescuentosTest {
     @DisplayName("Un cliente de convenio recibe 20 % de descuento")
     void convenioRecibeVeintePorCiento() {
         assertEquals(20000, descuentos.aplicarDescuento(25000, "convenio"));
+    }
+
+    @Test
+    @DisplayName("Rechaza un valor negativo")
+    void rechazaValorNegativo() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> descuentos.aplicarDescuento(-1, "frecuente"));
+        assertEquals("El valor no puede ser negativo", error.getMessage());
     }
 }
